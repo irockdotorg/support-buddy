@@ -1,0 +1,73 @@
+name: Build SupportBuddy
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            target: linux
+            ext: ""
+            name: support-buddy-linux
+          - os: macos-14
+            target: mac
+            ext: "-mac"
+            name: support-buddy-mac
+          - os: windows-latest
+            target: win
+            ext: ".exe"
+            name: support-buddy-win.exe
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flask psutil pyinstaller
+
+      - name: Build
+        shell: bash
+        run: |
+          python -m PyInstaller \
+            --onefile \
+            --name "${{ matrix.name }}" \
+            --hidden-import flask \
+            --hidden-import psutil \
+            --hidden-import werkzeug \
+            --hidden-import jinja2 \
+            --hidden-import secrets \
+            main.py
+
+      - name: Rename for Windows
+        if: matrix.target == 'win'
+        run: |
+          mv dist/support-buddy dist/support-buddy.exe
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: dist/${{ matrix.name }}${{ matrix.ext }}
+          retention-days: 30
+
+      - name: Upload release (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*${{ matrix.ext }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
