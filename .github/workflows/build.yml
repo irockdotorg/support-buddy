@@ -79,6 +79,6 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ matrix.target == 'mac' && 'dist/*.app' || format('dist/*{0}', matrix.ext) }}
+          files: ${{ matrix.target == 'mac' && 'dist/*' || format('dist/*{0}', matrix.ext) }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
