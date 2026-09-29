@@ -23,8 +23,7 @@ jobs:
             name: support-buddy-linux
           - os: macos-14
             target: mac
-            ext: "-mac"
-            name: support-buddy-mac
+            name: support-buddy
           - os: windows-latest
             target: win
             ext: ".exe"
@@ -46,27 +45,40 @@ jobs:
       - name: Build
         shell: bash
         run: |
-          python -m PyInstaller \
-            --onefile \
-            --name "${{ matrix.name }}" \
-            --hidden-import flask \
-            --hidden-import psutil \
-            --hidden-import werkzeug \
-            --hidden-import jinja2 \
-            --hidden-import secrets \
-            main.py
+          if [ "${{ matrix.target }}" = "mac" ]; then
+            python -m PyInstaller \
+              --onefile \
+              --windowed \
+              --name "support-buddy" \
+              --hidden-import flask \
+              --hidden-import psutil \
+              --hidden-import werkzeug \
+              --hidden-import jinja2 \
+              --hidden-import secrets \
+              main.py
+          else
+            python -m PyInstaller \
+              --onefile \
+              --name "${{ matrix.name }}" \
+              --hidden-import flask \
+              --hidden-import psutil \
+              --hidden-import werkzeug \
+              --hidden-import jinja2 \
+              --hidden-import secrets \
+              main.py
+          fi
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.name }}
-          path: dist/${{ matrix.name }}
+          path: ${{ matrix.target == 'mac' && 'dist/*.app' || format('dist/{0}', matrix.name) }}
           retention-days: 30
 
       - name: Upload release (tags only)
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/*${{ matrix.ext }}
+          files: ${{ matrix.target == 'mac' && 'dist/*.app' || format('dist/*{0}', matrix.ext) }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
