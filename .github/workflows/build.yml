@@ -2,9 +2,13 @@ name: Build SupportBuddy
 
 on:
   push:
-    branches: [main]
+    branches: [master]
     tags: ['v*']
   workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
 
 jobs:
   build:
