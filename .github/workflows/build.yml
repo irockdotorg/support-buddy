@@ -45,28 +45,50 @@ jobs:
       - name: Build
         shell: bash
         run: |
-          if [ "${{ matrix.target }}" = "mac" ]; then
-            python -m PyInstaller \
-              --onefile \
-              --windowed \
-              --name "support-buddy" \
-              --hidden-import flask \
-              --hidden-import psutil \
-              --hidden-import werkzeug \
-              --hidden-import jinja2 \
-              --hidden-import secrets \
-              main.py
-          else
-            python -m PyInstaller \
-              --onefile \
-              --name "${{ matrix.name }}" \
-              --hidden-import flask \
-              --hidden-import psutil \
-              --hidden-import werkzeug \
-              --hidden-import jinja2 \
-              --hidden-import secrets \
-              main.py
-          fi
+          python -m PyInstaller \
+            --onefile \
+            --name "${{ matrix.name }}" \
+            --hidden-import flask \
+            --hidden-import psutil \
+            --hidden-import werkzeug \
+            --hidden-import jinja2 \
+            --hidden-import secrets \
+            main.py
+
+      - name: Wrap Mac build as .app bundle
+        if: matrix.target == 'mac'
+        shell: bash
+        run: |
+          APP="dist/support-buddy.app"
+          rm -rf "$APP"
+          mkdir -p "$APP/Contents/MacOS"
+          mkdir -p "$APP/Contents/Resources"
+          cp dist/support-buddy "$APP/Contents/MacOS/"
+          chmod +x "$APP/Contents/MacOS/support-buddy"
+
+          python3 - << 'PYEOF'
+          import plistlib, datetime
+
+          plist = {
+              "CFBundleDevelopmentRegion": "English",
+              "CFBundleExecutable": "support-buddy",
+              "CFBundleIdentifier": "com.supportbuddy.app",
+              "CFBundleInfoDictionaryVersion": 6,
+              "CFBundleName": "SupportBuddy",
+              "CFBundlePackageType": "APPL",
+              "CFBundleShortVersionString": "1.0",
+              "CFBundleVersion": "1",
+              "LSMinimumSystemVersion": "10.13",
+              "NSHighResolutionCapable": True,
+          }
+          with open("dist/support-buddy.app/Contents/Info.plist", "wb") as f:
+              plistlib.dump(plist, f)
+          print("Created Info.plist")
+          PYEOF
+
+          echo "Built: $APP"
+          ls -la "$APP"
+          ls -R "$APP"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -79,6 +101,6 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ matrix.target == 'mac' && 'dist/*' || format('dist/*{0}', matrix.ext) }}
+          files: ${{ matrix.target == 'mac' && 'dist/*.app' || format('dist/*{0}', matrix.ext) }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
