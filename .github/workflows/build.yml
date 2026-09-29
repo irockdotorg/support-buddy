@@ -56,16 +56,11 @@ jobs:
             --hidden-import secrets \
             main.py
 
-      - name: Rename for Windows
-        if: matrix.target == 'win'
-        run: |
-          mv dist/support-buddy dist/support-buddy.exe
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.name }}
-          path: dist/${{ matrix.name }}${{ matrix.ext }}
+          path: dist/${{ matrix.name }}
           retention-days: 30
 
       - name: Upload release (tags only)
